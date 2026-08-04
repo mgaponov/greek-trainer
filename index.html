@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ακούω · Greek sentence trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Commissioner:wght@400;500;600;700&family=GFS+Didot&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d2427; --bg2:#0a1c1f; --surface:#16383b; --surface2:#1b4145;
+  --tile:#f2ead7; --tile-press:#e6dabb; --ink:#17282b;
+  --text:#eaf3ef; --muted:#8aa6a3; --line:rgba(255,255,255,.10);
+  --accent:#e3a83c; --accent-press:#c9922f;
+  --correct:#37b98c; --correct-bg:rgba(55,185,140,.15);
+  --wrong:#d9694a; --wrong-bg:rgba(217,105,74,.15);
+  --tap:.16s cubic-bezier(.2,.7,.3,1);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{
+  background:radial-gradient(120% 80% at 50% -10%,#123033 0%,var(--bg) 55%,var(--bg2) 100%);
+  color:var(--text);
+  font-family:"Commissioner","Noto Sans",system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  overscroll-behavior:none;
+}
+.app{max-width:520px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;position:relative}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+.wordmark{font-family:"GFS Didot",Georgia,serif;letter-spacing:.02em}
+
+/* ---------- HOME ---------- */
+#home{padding:28px 20px 40px;flex:1}
+.brand{display:flex;align-items:baseline;gap:10px;margin:6px 2px 26px}
+.brand h1{font-family:"GFS Didot",Georgia,serif;font-size:34px;margin:0;font-weight:400}
+.brand .sub{color:var(--muted);font-size:13px;font-weight:500}
+.module{margin-bottom:26px;animation:rise .5s both}
+.module h2{font-family:"GFS Didot",Georgia,serif;font-weight:400;font-size:22px;margin:0 2px 4px;
+  display:flex;align-items:center;gap:10px}
+.module .gk{color:var(--accent);font-size:14px;font-weight:600;font-family:"Commissioner",sans-serif}
+.module .count{color:var(--muted);font-size:12px;margin:0 2px 14px}
+.lessons{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.lesson{
+  background:var(--surface);border:1px solid var(--line);border-radius:16px;
+  padding:16px 16px 15px;text-align:left;transition:transform var(--tap),background var(--tap);
+  display:flex;flex-direction:column;gap:10px;min-height:104px;justify-content:space-between}
+.lesson:active{transform:scale(.97);background:var(--surface2)}
+.lesson .n{width:34px;height:34px;border-radius:11px;background:var(--bg2);color:var(--accent);
+  display:grid;place-items:center;font-weight:700;font-size:15px}
+.lesson.done .n{background:var(--correct-bg);color:var(--correct)}
+.lesson .ttl{font-weight:600;font-size:15px;line-height:1.25}
+.lesson .meta{color:var(--muted);font-size:12px;display:flex;align-items:center;gap:6px}
+.check{color:var(--correct)}
+
+/* ---------- PRACTICE ---------- */
+#practice{flex:1;display:none;flex-direction:column;padding:14px 18px 0}
+.top{display:flex;align-items:center;gap:14px;padding:6px 2px 18px}
+.x{width:34px;height:34px;border-radius:50%;color:var(--muted);font-size:22px;display:grid;place-items:center;flex:0 0 auto}
+.x:active{background:var(--surface)}
+.bar{flex:1;height:12px;border-radius:999px;background:var(--bg2);overflow:hidden}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#f0c268);
+  border-radius:999px;transition:width .35s ease}
+
+.prompt{font-weight:600;font-size:14px;color:var(--muted);margin:2px 2px 16px;letter-spacing:.02em}
+
+.audiorow{display:flex;align-items:center;gap:14px;margin-bottom:24px}
+.speaker{width:78px;height:78px;border-radius:22px;flex:0 0 auto;
+  background:linear-gradient(180deg,#2ca6cf,#1f7fa8);color:#eaf7fb;
+  display:grid;place-items:center;box-shadow:0 6px 0 #185f80, 0 10px 22px rgba(0,0,0,.35);
+  transition:transform var(--tap),box-shadow var(--tap)}
+.speaker:active{transform:translateY(4px);box-shadow:0 2px 0 #185f80,0 6px 14px rgba(0,0,0,.3)}
+.speaker svg{width:34px;height:34px}
+.wave{flex:1;display:flex;align-items:center;gap:4px;height:40px;opacity:.8}
+.wave span{flex:1;background:#2ca6cf;border-radius:3px;height:20%;animation:none;opacity:.55}
+.playing .wave span{animation:pulse 1s ease-in-out infinite}
+.slow{align-self:stretch;display:flex;align-items:center;padding:0 4px;color:var(--muted);
+  font-size:12px;font-weight:700;letter-spacing:.08em}
+.slow button{color:#2ca6cf;font-weight:700;letter-spacing:.06em;font-size:12px;padding:8px 6px}
+
+/* assembly = ruled dictation lines */
+.assembly{min-height:120px;display:flex;flex-direction:column;gap:16px;margin-bottom:8px}
+.rule{border-bottom:2px solid var(--line);min-height:52px;display:flex;flex-wrap:wrap;gap:8px;
+  align-content:flex-start;padding-bottom:8px}
+.assembly.ok .rule{border-color:var(--correct)}
+.assembly.bad .rule{border-color:var(--wrong)}
+
+.spacer{flex:1;min-height:20px}
+
+.bank{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:16px 0 20px;min-height:64px}
+
+.tile{
+  background:var(--tile);color:var(--ink);border-radius:13px;
+  padding:12px 16px;font-size:18px;font-weight:500;line-height:1;
+  box-shadow:0 3px 0 var(--tile-press);border:1px solid rgba(0,0,0,.06);
+  transition:transform var(--tap),box-shadow var(--tap),opacity var(--tap);
+  animation:pop .18s both}
+.tile:active{transform:translateY(3px);box-shadow:0 0 0 var(--tile-press)}
+.tile.inplace{box-shadow:0 3px 0 var(--tile-press)}
+.ghost{background:transparent;border:1px dashed transparent;box-shadow:none;
+  border-radius:13px;padding:12px 16px;font-size:18px;font-weight:500;line-height:1;
+  pointer-events:none;opacity:0}
+.ghost.show{background:var(--bg2);opacity:1;border-color:var(--line)}
+.assembly.ok .tile{background:#d9f2e8;box-shadow:0 3px 0 #b4e2d1}
+.assembly.bad .tile{background:#f6ddd4;box-shadow:0 3px 0 #eabfb0}
+.shake{animation:shake .4s}
+
+.check-btn{
+  margin:6px 2px 18px;padding:17px;border-radius:16px;width:100%;
+  background:var(--accent);color:#3a2b06;font-weight:700;font-size:16px;letter-spacing:.03em;
+  box-shadow:0 4px 0 var(--accent-press);transition:transform var(--tap),opacity var(--tap)}
+.check-btn:active{transform:translateY(4px);box-shadow:0 0 0 var(--accent-press)}
+.check-btn[disabled]{background:var(--surface);color:var(--muted);box-shadow:0 4px 0 var(--bg2);opacity:.7}
+
+/* result sheet */
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:20;max-width:520px;margin:0 auto;
+  transform:translateY(110%);transition:transform .32s cubic-bezier(.2,.8,.2,1);
+  padding:22px 20px calc(22px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0}
+.sheet.up{transform:translateY(0)}
+.sheet.good{background:#0f2f2a;box-shadow:0 -1px 0 var(--correct) inset}
+.sheet.bad{background:#31201b;box-shadow:0 -1px 0 var(--wrong) inset}
+.sheet .head{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.sheet .badge{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto}
+.good .badge{background:var(--correct);color:#08241d}
+.bad .badge{background:var(--wrong);color:#2a0f08}
+.sheet .title{font-size:19px;font-weight:700}
+.good .title{color:var(--correct)} .bad .title{color:var(--wrong)}
+.sheet .mean{color:var(--muted);font-size:13px;margin:0 0 2px;font-weight:600;letter-spacing:.03em}
+.sheet .ru{font-size:17px;color:var(--text);margin:2px 0 18px;line-height:1.35}
+.sheet .cont{width:100%;padding:16px;border-radius:14px;font-weight:700;font-size:16px;letter-spacing:.03em}
+.good .cont{background:var(--correct);color:#062019;box-shadow:0 4px 0 #268266}
+.bad .cont{background:var(--wrong);color:#2a0f08;box-shadow:0 4px 0 #ab4b34}
+.sheet .cont:active{transform:translateY(4px)}
+
+.done-card{margin:auto;text-align:center;padding:40px 24px}
+.done-card .big{font-family:"GFS Didot",serif;font-size:40px;color:var(--accent);margin-bottom:8px}
+
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{height:20%}50%{height:100%}}
+@keyframes shake{10%,90%{transform:translateX(-2px)}30%,70%{transform:translateX(5px)}50%{transform:translateX(-6px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HOME -->
+  <section id="home">
+    <div class="brand">
+      <h1 class="wordmark">Ακούω</h1>
+      <span class="sub">tap what you hear · греческий</span>
+    </div>
+    <div id="modules"></div>
+  </section>
+
+  <!-- PRACTICE -->
+  <section id="practice">
+    <div class="top">
+      <button class="x" id="quit" aria-label="Close">✕</button>
+      <div class="bar"><i id="prog" style="width:0%"></i></div>
+    </div>
+    <div id="stage"></div>
+  </section>
+
+  <!-- RESULT SHEET -->
+  <div class="sheet" id="sheet">
+    <div class="head">
+      <div class="badge" id="badge"></div>
+      <div class="title" id="sheetTitle"></div>
+    </div>
+    <div class="mean" id="meanLabel" style="display:none">Перевод</div>
+    <div class="ru" id="ru"></div>
+    <button class="cont" id="cont">Продолжить</button>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   YOUR CONTENT GOES HERE
+   ---------------------------------------------------------------------
+   Structure: modules -> 4 lessons -> sentences.
+   Each sentence:
+     greek       – the correct Greek sentence (words split on spaces)
+     ru          – Russian translation (shown on a correct answer)
+     audio       – (optional) filename inside the /audio folder next to
+                   this file, e.g. "m1l1_s1.mp3". If omitted or the file
+                   is missing, the app falls back to Greek text-to-speech.
+   Delete the sample below and paste your own. Keep the shape identical.
+   ===================================================================== */
+const DATA = {
+  modules: [
+    {
+      title: "Module 2", gk: "Ενότητα 2",
+      lessons: [
+        { title: "Body & tableware", sentences: [   // sheet 2.1
+          { greek:"Η γλώσσα μου είναι κόκκινη", ru:"Мой язык красный" },
+          { greek:"Τα φρύδια μου είναι παχιά", ru:"Мои брови густые" },
+          { greek:"Τα χείλη της είναι ροζ", ru:"Её губы розовые" },
+          { greek:"Το στήθος του είναι δυνατό", ru:"У него сильная грудь" },
+          { greek:"Η πλάτη μου πονάει", ru:"У меня болит спина" },
+          { greek:"Η καρδιά μου χτυπάει γρήγορα", ru:"Моё сердце бьётся быстро" },
+          { greek:"Το μυαλό σου είναι έξυπνο", ru:"Твой мозг умный" },
+          { greek:"Πίνω νερό κάθε μέρα", ru:"Я пью воду каждый день" },
+          { greek:"Η φωτιά είναι ζεστή", ru:"Огонь горячий" },
+          { greek:"Η γη είναι καφέ", ru:"Земля коричневая" },
+          { greek:"Ο ουρανός είναι μπλε", ru:"Небо голубое" },
+          { greek:"Τα αστέρια λάμπουν τη νύχτα", ru:"Звезды светят ночью" },
+          { greek:"Το σύννεφο είναι λευκό", ru:"Облако белое" },
+          { greek:"Η βροχή πέφτει δυνατά", ru:"Дождь идёт сильно" },
+          { greek:"Το χιόνι είναι κρύο", ru:"Снег холодный" },
+          { greek:"Η θερμοκρασία είναι χαμηλή", ru:"Температура низкая" },
+          { greek:"Ο φίλος μου είναι καλός", ru:"Мой друг хороший" },
+          { greek:"Ο εχθρός μου είναι δυνατός", ru:"Мой враг сильный" },
+          { greek:"Η χαρά είναι μεγάλη", ru:"Радость велика" },
+          { greek:"Αισθάνομαι λύπη σήμερα", ru:"Сегодня я чувствую грусть" },
+          { greek:"Ο φόβος είναι φυσιολογικός", ru:"Страх это нормально" },
+          { greek:"Η αγάπη είναι δυνατή", ru:"Любовь сильная" },
+          { greek:"Έχω ελπίδα για το μέλλον", ru:"У меня есть надежда на будущее" },
+          { greek:"Η διασκέδαση είναι σημαντική", ru:"Развлечения важны" },
+          { greek:"Τα χρήματα είναι απαραίτητα", ru:"Деньги необходимы" },
+          { greek:"Λαμβάνω ένα δώρο", ru:"Я получаю подарок" },
+          { greek:"Το μάθημα είναι δύσκολο", ru:"Урок сложный" },
+          { greek:"Η γιορτή ήταν όμορφη", ru:"Праздник был красивый" },
+          { greek:"Παίζουμε ένα παιχνίδι", ru:"Мы играем в игру" },
+          { greek:"Χρειάζομαι μια ομπρέλα", ru:"Мне нужен зонт" },
+          { greek:"Τα παπούτσια μου είναι μαύρα", ru:"Моя обувь чёрная" },
+          { greek:"Χρησιμοποιώ ένα κουτάλι", ru:"Я использую ложку" },
+          { greek:"Παίρνω το πιρούνι μου", ru:"Я беру свою вилку" },
+          { greek:"Το μαχαίρι κόβει καλά", ru:"Нож хорошо режет" },
+          { greek:"Το ποτήρι είναι γεμάτο", ru:"Стакан полный" },
+          { greek:"Το πιάτο είναι άδειο", ru:"Тарелка пустая" },
+        ]},
+        { title: "Motion & opposites", sentences: [   // sheet 2.2
+          { greek:"Πηγαίνω στο σχολείο", ru:"Я иду в школу" },
+          { greek:"Η Μαρία έρχεται στο σπίτι", ru:"Мария приходит домой" },
+          { greek:"Ο Γιώργος φεύγει από τη δουλειά", ru:"Георгиос уходит с работы" },
+          { greek:"Τα παιδιά τρέχουν στον κήπο", ru:"Дети бегают в саду" },
+          { greek:"Η Μαρία περπατάει στον δρόμο", ru:"Мария ходит по дороге" },
+          { greek:"Η Μαρία κατεβαίνει τη σκάλα", ru:"Мария спускается по лестнице" },
+          { greek:"Τα πουλιά πετάνε στον ουρανό", ru:"Птицы летают в небе" },
+          { greek:"Ο Νίκος ανεβαίνει το βουνό", ru:"Никос поднимается на гору" },
+          { greek:"Τα παιδιά χορεύουν στη γιορτή", ru:"Дети танцуют на празднике" },
+          { greek:"Ο Νίκος κολυμπάει στη θάλασσα", ru:"Никос плавает в море" },
+          { greek:"Ο Γιώργος γυρίζει στο σπίτι", ru:"Георгиос возвращается домой" },
+          { greek:"Το παιδί πηδάει στον κήπο", ru:"Ребёнок прыгает в саду" },
+          { greek:"Ο Γιώργος περνάει τον δρόμο", ru:"Георгиос переходит дорогу" },
+          { greek:"Η Μαρία στέκεται στον κήπο", ru:"Мария стоит в саду" },
+          { greek:"Το αυτοκίνητο είναι γρήγορο", ru:"Машина быстрая" },
+          { greek:"Το νερό είναι κρύο", ru:"Вода холодная" },
+          { greek:"Η θάλασσα είναι βαθιά", ru:"Море глубокое" },
+          { greek:"Ο καφές είναι ζεστός", ru:"Кофе тёплый" },
+          { greek:"Το νερό είναι ρηχό", ru:"Вода мелкая" },
+          { greek:"Ο δρόμος είναι αργός", ru:"Дорога медленная" },
+          { greek:"Το σπίτι είναι μεγάλο", ru:"Дом большой" },
+          { greek:"Το δωμάτιο είναι μικρό", ru:"Комната маленькая" },
+          { greek:"Το φόρεμα είναι πολύχρωμο", ru:"Платье разноцветное" },
+          { greek:"Το σακάκι είναι μονόχρωμο", ru:"Пиджак одноцветный" },
+          { greek:"Ο ουρανός είναι λαμπερός", ru:"Небо сияющее" },
+          { greek:"Το δωμάτιο είναι σκοτεινό", ru:"Комната тёмная" },
+          { greek:"Το χιόνι είναι λευκό", ru:"Снег белый" },
+          { greek:"Ο άντρας είναι πλούσιος", ru:"Мужчина богатый" },
+          { greek:"Το σπίτι είναι φτωχό", ru:"Дом бедный" },
+          { greek:"Η βαλίτσα είναι βαριά", ru:"Чемодан тяжёлый" },
+          { greek:"Η γάτα είναι μαύρη", ru:"Кошка чёрная" },
+          { greek:"Το κουτί είναι ελαφρύ", ru:"Коробка лёгкая" },
+        ]},
+        { title: "Food, colours & nature", sentences: [   // sheet 2.3
+          { greek:"Το λεμόνι είναι κίτρινο", ru:"Лимон жёлтый" },
+          { greek:"Τρώω ένα πορτοκάλι", ru:"Я ем апельсин" },
+          { greek:"Το αυγό είναι λευκό", ru:"Яйцо белое" },
+          { greek:"Η σαλάτα είναι φρέσκια", ru:"Салат свежий" },
+          { greek:"Η σούπα είναι ζεστή", ru:"Суп горячий" },
+          { greek:"Το αλάτι είναι απαραίτητο", ru:"Соль необходима" },
+          { greek:"Το κρέας είναι κόκκινο", ru:"Мясо красное" },
+          { greek:"Τρώω ψάρι συχνά", ru:"Я часто ем рыбу" },
+          { greek:"Η ζάχαρη είναι γλυκιά", ru:"Сахар сладкий" },
+          { greek:"Βάζω πιπέρι στη σαλάτα", ru:"Я добавляю перец в салат" },
+          { greek:"Το βούτυρο είναι φρέσκο", ru:"Масло свежее" },
+          { greek:"Το λάδι είναι ελαφρύ", ru:"Масло лёгкое" },
+          { greek:"Το κρασί είναι κόκκινο", ru:"Вино красное" },
+          { greek:"Το μήλο είναι πράσινο", ru:"Яблоко зелёное" },
+          { greek:"Ο ουρανός είναι μπλε", ru:"Небо синее" },
+          { greek:"Το σύννεφο είναι γκρι", ru:"Облако серое" },
+          { greek:"Το αυτοκίνητο είναι μαύρο", ru:"Машина чёрная" },
+          { greek:"Το τραπέζι είναι καφέ", ru:"Стол коричневый" },
+          { greek:"Η λίμνη είναι ήσυχη", ru:"Озеро спокойное" },
+          { greek:"Το δάσος είναι πράσινο", ru:"Лес зелёный" },
+          { greek:"Το βουνό είναι ψηλό", ru:"Гора высокая" },
+          { greek:"Το ποτάμι είναι βαθύ", ru:"Река глубокая" },
+          { greek:"Η θάλασσα είναι όμορφη", ru:"Море красивое" },
+          { greek:"Γράφω με το μολύβι", ru:"Я пишу карандашом" },
+          { greek:"Το στυλό είναι μπλε", ru:"Ручка синяя" },
+          { greek:"Ο ωκεανός είναι τεράστιος", ru:"Океан огромный" },
+          { greek:"Το σύννεφο είναι λευκό", ru:"Облако белое" },
+          { greek:"Ο αέρας είναι δροσερός", ru:"Воздух прохладный" },
+          { greek:"Το ζώο είναι μικρό", ru:"Животное маленькое" },
+          { greek:"Το χαρτί είναι λευκό", ru:"Бумага белая" },
+          { greek:"Το φυτό είναι πράσινο", ru:"Растение зелёное" },
+          { greek:"Διαβάζω ένα βιβλίο", ru:"Я читаю книгу" },
+        ]},
+        { title: "Colours & the home", sentences: [   // sheet 2.4
+          { greek:"Το λουλούδι είναι κόκκινο", ru:"Цветок красный" },
+          { greek:"Μου αρέσει το μπλε χρώμα", ru:"Мне нравится синий цвет" },
+          { greek:"Η γη είναι υγρή μετά τη βροχή", ru:"Земля влажная после дождя" },
+          { greek:"Ο Ιανουάριος είναι ο πρώτος μήνας του χρόνου", ru:"Январь первый месяц года" },
+          { greek:"Το χαλί είναι μαλακό", ru:"Ковёр мягкий" },
+          { greek:"Κοιτάζομαι στον καθρέφτη", ru:"Я смотрюсь в зеркало" },
+          { greek:"Η οροφή είναι άσπρη", ru:"Потолок белый" },
+          { greek:"Το πάτωμα είναι καθαρό", ru:"Пол чистый" },
+          { greek:"Το ποτήρι είναι γεμάτο νερό", ru:"Стакан полон воды" },
+          { greek:"Το πιάτο είναι στο τραπέζι", ru:"Тарелка на столе" },
+          { greek:"Το μαχαίρι κόβει καλά", ru:"Нож хорошо режет" },
+          { greek:"Το πιρούνι είναι μεταλλικό", ru:"Вилка металлическая" },
+          { greek:"Το δάχτυλό μου είναι μικρό", ru:"Мой палец маленький" },
+          { greek:"Το χέρι μου είναι δυνατό", ru:"Моя рука сильная" },
+          { greek:"Το πόδι μου είναι κουρασμένο", ru:"Моя нога устала" },
+          { greek:"Το αυτί μου πονάει", ru:"У меня болит ухо" },
+          { greek:"Τα μάτια μου είναι μπλε", ru:"Мои глаза голубые" },
+          { greek:"Ανοίγω το στόμα μου", ru:"Я открываю рот" },
+          { greek:"Το δόντι μου πονάει", ru:"У меня болит зуб" },
+          { greek:"Η μύτη μου είναι μικρή", ru:"У меня маленький нос" },
+          { greek:"Το κεφάλι μου είναι μεγάλο", ru:"У меня большая голова" },
+        ]},
+      ]
+    },
+    {
+      title: "Module 3", gk: "Ενότητα 3",
+      lessons: [
+        { title: "Health, home & school", sentences: [   // sheet 3.1
+          { greek:"Τα μαλλιά μου είναι μακριά", ru:"Мои волосы длинные" },
+          { greek:"Έχω πόνο στο κεφάλι", ru:"У меня болит голова" },
+          { greek:"Το αίμα είναι κόκκινο", ru:"Кровь красная" },
+          { greek:"Παίρνω φάρμακο για τον πυρετό", ru:"Я принимаю лекарство от температуры" },
+          { greek:"Η καρδιά χτυπάει γρήγορα", ru:"Сердце бьётся быстро" },
+          { greek:"Οι πνεύμονες μας βοηθούν να αναπνέουμε", ru:"Лёгкие помогают нам дышать" },
+          { greek:"Το στομάχι μου πονάει", ru:"У меня болит желудок" },
+          { greek:"Το ήπαρ καθαρίζει το αίμα", ru:"Печень очищает кровь" },
+          { greek:"Τα νεφρά φιλτράρουν το αίμα", ru:"Почки фильтруют кровь" },
+          { greek:"Η φωνή της είναι όμορφη", ru:"Её голос красивый" },
+          { greek:"Ο λαιμός μου πονάει", ru:"У меня болит горло" },
+          { greek:"Η πλάτη μου είναι κουρασμένη", ru:"Моя спина устала" },
+          { greek:"Το κεφάλι μου πονάει", ru:"У меня болит голова" },
+          { greek:"Η ανάσα μου είναι βαριά", ru:"Моё дыхание тяжёлое" },
+          { greek:"Η ζωή είναι όμορφη", ru:"Жизнь прекрасна" },
+          { greek:"Η υγεία είναι πολύτιμη", ru:"Здоровье это ценность" },
+          { greek:"Είμαι άρρωστος σήμερα", ru:"Я сегодня болен" },
+          { greek:"Ο γιατρός βοηθά τους ασθενείς", ru:"Врач помогает пациентам" },
+          { greek:"Το νοσοκομείο είναι μεγάλο", ru:"Больница большая" },
+          { greek:"Αυτό το φάρμακο είναι ισχυρό", ru:"Это лекарство сильное" },
+          { greek:"Το σπίτι μου είναι ζεστό", ru:"Мой дом уютный" },
+          { greek:"Το δωμάτιό μου είναι μικρό", ru:"Моя комната маленькая" },
+          { greek:"Η καρέκλα είναι ξύλινη", ru:"Стул деревянный" },
+          { greek:"Το τραπέζι είναι στρογγυλό", ru:"Стол круглый" },
+          { greek:"Η κουζίνα είναι καθαρή", ru:"Кухня чистая" },
+          { greek:"Το μπάνιο έχει ζεστό νερό", ru:"В ванной есть горячая вода" },
+          { greek:"Το κρεβάτι είναι άνετο", ru:"Кровать удобная" },
+          { greek:"Το παράθυρο είναι ανοιχτό", ru:"Окно открыто" },
+          { greek:"Η πόρτα είναι κλειστή", ru:"Дверь закрыта" },
+          { greek:"Το γραφείο μου είναι τακτοποιημένο", ru:"Мой письменный стол аккуратный" },
+          { greek:"Το σχολείο έχει πολλούς μαθητές", ru:"В школе много учеников" },
+          { greek:"Ο δάσκαλος εξηγεί το μάθημα", ru:"Учитель объясняет урок" },
+          { greek:"Ο μαθητής διαβάζει το βιβλίο", ru:"Ученик читает книгу" },
+        ]},
+        { title: "Numbers", sentences: [   // sheet 3.2
+          { greek:"Έχω ένα μήλο", ru:"У меня одно яблоко" },
+          { greek:"Έχω δύο πορτοκάλια", ru:"У меня два апельсина" },
+          { greek:"Έχω τρία βιβλία", ru:"У меня три книги" },
+          { greek:"Έχω τέσσερις καρέκλες", ru:"У меня четыре стула" },
+          { greek:"Έχω πέντε μολύβια", ru:"У меня пять карандашей" },
+          { greek:"Έχω έξι μήλα", ru:"У меня шесть яблок" },
+          { greek:"Έχω επτά ποτήρια", ru:"У меня семь стаканов" },
+          { greek:"Έχω οκτώ καρέκλες", ru:"У меня восемь стульев" },
+          { greek:"Έχω εννέα βιβλία", ru:"У меня девять книг" },
+          { greek:"Έχω δέκα φίλους", ru:"У меня десять друзей" },
+          { greek:"Έχω έντεκα στυλό", ru:"У меня одиннадцать ручек" },
+          { greek:"Έχω δώδεκα μήλα", ru:"У меня двенадцать яблок" },
+          { greek:"Έχω δεκατρία βιβλία", ru:"У меня тринадцать книг" },
+          { greek:"Έχω δεκατέσσερα μολύβια", ru:"У меня четырнадцать карандашей" },
+          { greek:"Έχω δεκαπέντε πορτοκάλια", ru:"У меня пятнадцать апельсинов" },
+          { greek:"Έχω τριάντα καρέκλες", ru:"У меня тридцать стульев" },
+          { greek:"Έχω σαράντα φίλους", ru:"У меня сорок друзей" },
+          { greek:"Έχω πενήντα βιβλία", ru:"У меня пятьдесят книг" },
+          { greek:"Έχω εξήντα ποτήρια", ru:"У меня шестьдесят стаканов" },
+          { greek:"Έχω εβδομήντα μήλα", ru:"У меня семьдесят яблок" },
+          { greek:"Έχω ογδόντα καρέκλες", ru:"У меня восемьдесят стульев" },
+          { greek:"Έχω ενενήντα στυλό", ru:"У меня девяносто ручек" },
+          { greek:"Έχω εκατό βιβλία", ru:"У меня сто книг" },
+          { greek:"Έχω διακόσια μήλα", ru:"У меня двести яблок" },
+          { greek:"Έχω τριακόσια ποτήρια", ru:"У меня триста стаканов" },
+          { greek:"Έχω τετρακόσια βιβλία", ru:"У меня четыреста книг" },
+          { greek:"Έχω πεντακόσια στυλό", ru:"У меня пятьсот ручек" },
+          { greek:"Έχω εξακόσια πορτοκάλια", ru:"У меня шестьсот апельсинов" },
+          { greek:"Έχω εφτακόσια ποτήρια", ru:"У меня семьсот стаканов" },
+          { greek:"Έχω οκτακόσια βιβλία", ru:"У меня восемьсот книг" },
+          { greek:"Έχω εννιακόσια μήλα", ru:"У меня девятьсот яблок" },
+        ]},
+        { title: "Home & garden", sentences: [   // sheet 3.3
+          { greek:"Το χωριό είναι μικρό", ru:"Деревня маленькая" },
+          { greek:"Τα σπίρτα είναι στο τραπέζι", ru:"Спички на столе" },
+          { greek:"Ο φούρνος είναι ζεστός", ru:"Печь горячая" },
+          { greek:"Το ψυγείο είναι γεμάτο φρούτα", ru:"Холодильник полон фруктов" },
+          { greek:"Το πλυντήριο πλένει ρούχα", ru:"Стиральная машина стирает одежду" },
+          { greek:"Το ποδήλατο είναι στον κήπο", ru:"Велосипед в саду" },
+          { greek:"Το ραδιόφωνο παίζει μουσική", ru:"Радио играет музыку" },
+          { greek:"Η τηλεόραση είναι ανοιχτή", ru:"Телевизор включён" },
+          { greek:"Ο διακόπτης είναι στον τοίχο", ru:"Выключатель на стене" },
+          { greek:"Ο καναπές είναι άνετος", ru:"Диван удобный" },
+          { greek:"Το χορτάρι είναι πράσινο", ru:"Трава зелёная" },
+          { greek:"Τα κλαδιά είναι στον κήπο", ru:"Ветки в саду" },
+          { greek:"Ο φράχτης είναι ξύλινος", ru:"Забор деревянный" },
+          { greek:"Το ράφι έχει βιβλία", ru:"На полке книги" },
+          { greek:"Ο κήπος είναι μεγάλος", ru:"Сад большой" },
+          { greek:"Το λουτρό είναι καθαρό", ru:"Ванная чистая" },
+          { greek:"Το σαπούνι είναι άσπρο", ru:"Мыло белое" },
+          { greek:"Η οδοντόβουρτσα είναι στο μπάνιο", ru:"Зубная щётка в ванной" },
+          { greek:"Τα σκουπίδια είναι στον κάδο", ru:"Мусор в ведре" },
+          { greek:"Η οδοντόκρεμα είναι φρέσκια", ru:"Зубная паста свежая" },
+          { greek:"Ο νιπτήρας είναι καθαρός", ru:"Раковина чистая" },
+          { greek:"Η σακούλα είναι γεμάτη σκουπίδια", ru:"Мешок полон мусора" },
+          { greek:"Η σκούπα είναι στη γωνία", ru:"Метла в углу" },
+          { greek:"Ο κάδος είναι μεγάλος", ru:"Мусорное ведро большое" },
+          { greek:"Το λάστιχο είναι μακρύ", ru:"Шланг длинный" },
+          { greek:"Η γλάστρα έχει λουλούδια", ru:"В горшке цветы" },
+          { greek:"Ο σπόρος μεγαλώνει", ru:"Семя растёт" },
+        ]},
+        { title: "In the kitchen", sentences: [   // sheet 3.4
+          { greek:"Το καλαθάκι είναι γεμάτο φρούτα", ru:"Корзинка полна фруктов" },
+          { greek:"Το μαχαίρι κουζίνας κόβει λαχανικά", ru:"Кухонный нож режет овощи" },
+          { greek:"Η κατσαρόλα είναι στο μάτι της κουζίνας", ru:"Кастрюля на конфорке" },
+          { greek:"Το τηγάνι είναι ζεστό", ru:"Сковорода горячая" },
+          { greek:"Η καφετιέρα φτιάχνει καφέ", ru:"Кофеварка готовит кофе" },
+          { greek:"Ο απορροφητήρας δουλεύει καλά", ru:"Вытяжка работает хорошо" },
+          { greek:"Η λάμπα δίνει φως", ru:"Лампочка даёт свет" },
+          { greek:"Η κουρτίνα είναι πράσινη", ru:"Занавеска зелёная" },
+          { greek:"Η κορνίζα έχει μια φωτογραφία", ru:"В рамке есть фотография" },
+          { greek:"Η βιβλιοθήκη έχει πολλά βιβλία", ru:"В книжном шкафу много книг" },
+          { greek:"Το σιφόνι είναι καθαρό", ru:"Сифон чистый" },
+          { greek:"Η βρύση έχει νερό", ru:"Из крана течёт вода" },
+          { greek:"Η κουζίνα είναι καινούργια", ru:"Плита новая" },
+          { greek:"Η Μαρία μαγειρεύει σούπα", ru:"Мария готовит суп" },
+          { greek:"Εγώ πλένω τα πιάτα", ru:"Я мою тарелки" },
+          { greek:"Η Μαρία σκουπίζει το πάτωμα", ru:"Мария подметает пол" },
+          { greek:"Ο Νίκος καθαρίζει το ψάρι", ru:"Никос чистит рыбу" },
+          { greek:"Ο πατέρας φτιάχνει το καλαθάκι", ru:"Отец чинит корзину" },
+          { greek:"Ο Γιώργος σκάβει τον κήπο", ru:"Георгиос копает сад" },
+          { greek:"Εγώ φυτεύω σπόρους", ru:"Я сажаю семена" },
+          { greek:"Η Μαρία ψήνει ψωμί", ru:"Мария печёт хлеб" },
+          { greek:"Βάζω το τηγάνι στο μάτι της κουζίνας", ru:"Я ставлю сковороду на конфорку" },
+          { greek:"Βγάζω τα πιάτα από το ντουλάπι", ru:"Я вынимаю тарелки из шкафа" },
+          { greek:"Μαγειρεύω φαγητό για την οικογένειά μου", ru:"Я готовлю еду для своей семьи" },
+          { greek:"Πλένω το τηγάνι", ru:"Я мою сковороду" },
+          { greek:"Καθαρίζω τα σκουπίδια", ru:"Я очищаю мусор" },
+          { greek:"Φτιάχνω τη βρύση", ru:"Я чиню кран" },
+        ]},
+      ]
+    },
+  ]
+};
+
+const AUDIO_DIR = "audio/";   // folder next to this file that holds sentence recordings
+
+/* ===================== app logic (no need to edit) ==================== */
+const $ = s => document.querySelector(s);
+const homeEl = $("#home"), practiceEl = $("#practice");
+const stage = $("#stage"), prog = $("#prog"), sheet = $("#sheet");
+
+/* progress persistence — guarded so it never breaks if storage is blocked */
+const store = {
+  get(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+let done = store.get("gk_done") || {};   // { "0-1": true } => module 0, lesson 1
+
+/* ---- greek text-to-speech (word taps + fallback sentence audio) ---- */
+let greekVoice = null;
+function pickVoice(){
+  const vs = speechSynthesis.getVoices();
+  greekVoice = vs.find(v=>/el(-|_)?/i.test(v.lang)) || null;
+}
+if ("speechSynthesis" in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+/* single-letter Greek articles (\u0397/\u03b7/\u039f/\u03bf) get narrated as letter names
+   when spoken in isolation. So at the tile level we merge each single-letter
+   article with the word that follows it into one token ("\u039f \u039d\u03af\u03ba\u03bf\u03c2"): it
+   shows as one tile and is voiced as a natural article+noun pair. */
+const ARTICLES = new Set(["\u0397","\u03b7","\u039f","\u03bf"]);
+function tokenize(greek){
+  const raw = greek.trim().split(/\s+/), toks = [];
+  for(let i=0;i<raw.length;i++){
+    if(ARTICLES.has(raw[i]) && i+1<raw.length){ toks.push(raw[i]+" "+raw[i+1]); i++; }
+    else toks.push(raw[i]);
+  }
+  return toks;
+}
+function speak(text, rate=1){
+  if(!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "el-GR"; u.rate = rate;
+  if(greekVoice) u.voice = greekVoice;
+  speechSynthesis.speak(u);
+}
+
+/* ---------- HOME ---------- */
+function renderHome(){
+  practiceEl.style.display="none"; homeEl.style.display="block";
+  const wrap = $("#modules"); wrap.innerHTML="";
+  DATA.modules.forEach((m, mi)=>{
+    const md = document.createElement("div"); md.className="module"; md.style.animationDelay=(mi*.06)+"s";
+    md.innerHTML = `<h2>${m.title} <span class="gk">${m.gk||""}</span></h2>
+      <div class="count">${m.lessons.length} lessons</div>
+      <div class="lessons"></div>`;
+    const grid = md.querySelector(".lessons");
+    m.lessons.forEach((l, li)=>{
+      const key = mi+"-"+li, isDone = !!done[key];
+      const b = document.createElement("button");
+      b.className = "lesson"+(isDone?" done":"");
+      b.innerHTML = `<div class="n">${isDone?"✓":(li+1)}</div>
+        <div class="ttl">${l.title||("Lesson "+(li+1))}</div>
+        <div class="meta">${l.sentences.length} sentences${isDone?' <span class="check">· done</span>':''}</div>`;
+      b.onclick = ()=> startLesson(mi, li);
+      grid.appendChild(b);
+    });
+    wrap.appendChild(md);
+  });
+}
+
+/* ---------- PRACTICE STATE ---------- */
+let S = null;
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function startLesson(mi, li){
+  const lesson = DATA.modules[mi].lessons[li];
+  S = { mi, li, queue: shuffle(lesson.sentences), idx:0 };
+  homeEl.style.display="none"; practiceEl.style.display="flex";
+  loadSentence();
+}
+
+function loadSentence(){
+  hideSheet();
+  const s = S.queue[S.idx];
+  const correct = tokenize(s.greek);   // single-letter articles merge with the next word
+  S.correct = correct;
+  S.bank = correct.map((w,i)=>({id:i, word:w}));
+  S.order = shuffle(S.bank);          // display order in the word bank
+  S.used = new Set();                 // ids currently placed above
+  S.placed = [];                      // ordered list of placed ids
+  S.solved = false;
+  prog.style.width = ((S.idx)/S.queue.length*100)+"%";
+  drawStage(s);
+  playSentence();                     // auto-play on arrival
+}
+
+function drawStage(s){
+  stage.innerHTML = `
+    <div class="prompt">TAP WHAT YOU HEAR · нажми, что слышишь</div>
+    <div class="audiorow" id="arow">
+      <button class="speaker" id="play" aria-label="Play audio">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 10v4a1 1 0 0 0 1 1h3l4 4a1 1 0 0 0 1.7-.7V5.7A1 1 0 0 0 11 5L7 9H4a1 1 0 0 0-1 1z"/><path d="M16 8.5a4 4 0 0 1 0 7" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/><path d="M18.5 6a7 7 0 0 1 0 12" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+      </button>
+      <div class="wave">${"<span></span>".repeat(14)}</div>
+      <div class="slow"><button id="slow">SLOW</button></div>
+    </div>
+    <div class="assembly" id="assembly"><div class="rule" id="rule"></div></div>
+    <div class="spacer"></div>
+    <div class="bank" id="bank"></div>
+    <button class="check-btn" id="check" disabled>ПРОВЕРИТЬ</button>`;
+  $("#play").onclick = ()=> playSentence();
+  $("#slow").onclick = ()=> playSentence(true);
+  $("#check").onclick = checkAnswer;
+  drawRule(); drawBank();
+}
+
+function drawBank(){
+  const bank = $("#bank"); bank.innerHTML="";
+  S.order.forEach(item=>{
+    if(S.used.has(item.id)){
+      const g = document.createElement("div"); g.className="ghost show"; g.textContent=item.word;
+      bank.appendChild(g);
+    } else {
+      const t = document.createElement("button"); t.className="tile"; t.textContent=item.word;
+      t.onclick = ()=> placeWord(item.id);
+      bank.appendChild(t);
+    }
+  });
+}
+
+function drawRule(){
+  const rule = $("#rule"); rule.innerHTML="";
+  S.placed.forEach(id=>{
+    const w = S.bank[id].word;
+    const t = document.createElement("button"); t.className="tile inplace"; t.textContent=w;
+    t.onclick = ()=> removeWord(id);
+    rule.appendChild(t);
+  });
+  const filled = S.placed.length, total = S.bank.length;
+  $("#check").disabled = filled !== total || S.solved;
+}
+
+function placeWord(id){
+  if(S.solved) return;
+  S.used.add(id); S.placed.push(id);
+  speak(S.bank[id].word);   // tokens already merge single-letter articles with their noun
+  drawRule(); drawBank();
+}
+function removeWord(id){
+  if(S.solved) return;
+  S.used.delete(id);
+  S.placed = S.placed.filter(x=>x!==id);
+  $("#assembly").classList.remove("ok","bad");
+  drawRule(); drawBank();
+}
+
+/* ---------- AUDIO ---------- */
+let audioEl = null;
+function playSentence(slow=false){
+  const s = S.queue[S.idx];
+  const arow = $("#arow"); if(arow){ arow.classList.add("playing"); setTimeout(()=>arow.classList.remove("playing"),1600); }
+  if(s.audio){
+    try{
+      if(audioEl) audioEl.pause();
+      audioEl = new Audio(AUDIO_DIR + s.audio);
+      audioEl.playbackRate = slow ? 0.65 : 1;
+      audioEl.play().catch(()=> speak(s.greek, slow?0.6:1));  // fallback to TTS if file missing/blocked
+      return;
+    }catch(e){}
+  }
+  speak(s.greek, slow?0.6:1);        // no recording → text-to-speech
+}
+
+/* ---------- CHECK ---------- */
+function checkAnswer(){
+  const s = S.queue[S.idx];
+  const correct = S.correct;
+  const answer = S.placed.map(id=>S.bank[id].word);
+  const ok = answer.join(" ") === correct.join(" ");
+  const asm = $("#assembly");
+  if(ok){
+    S.solved = true;
+    asm.classList.add("ok");
+    showSheet(true, s.ru);
+  } else {
+    asm.classList.add("bad");
+    const rule = $("#rule"); rule.classList.add("shake"); setTimeout(()=>rule.classList.remove("shake"),400);
+    showSheet(false, s.ru);
+  }
+}
+
+/* ---------- RESULT SHEET ---------- */
+function showSheet(good, ru){
+  sheet.className = "sheet " + (good?"good":"bad");
+  $("#badge").textContent = good ? "✓" : "✕";
+  $("#sheetTitle").textContent = good ? "Σωστά! · Верно" : "Λάθος · Попробуй ещё";
+  $("#meanLabel").style.display = good ? "block" : "none";
+  $("#ru").textContent = good ? ru : "";
+  $("#cont").textContent = good ? "Продолжить" : "Исправить";
+  requestAnimationFrame(()=> sheet.classList.add("up"));
+  $("#cont").onclick = good ? nextSentence : retry;
+}
+function hideSheet(){ sheet.classList.remove("up"); }
+function retry(){
+  hideSheet();
+  $("#assembly").classList.remove("bad");
+}
+function nextSentence(){
+  hideSheet();
+  S.idx++;
+  if(S.idx >= S.queue.length){ finishLesson(); return; }
+  setTimeout(loadSentence, 220);
+}
+function finishLesson(){
+  prog.style.width="100%";
+  done[S.mi+"-"+S.li] = true; store.set("gk_done", done);
+  stage.innerHTML = `<div class="done-card">
+      <div class="big wordmark">Μπράβο!</div>
+      <p style="color:var(--muted)">Урок пройден — ${S.queue.length} предложений.</p>
+      <button class="check-btn" style="margin-top:22px" id="back">К урокам</button>
+    </div>`;
+  $("#back").onclick = renderHome;
+}
+
+$("#quit").onclick = ()=>{ hideSheet(); if(audioEl) audioEl.pause(); renderHome(); };
+renderHome();
+</script>
+</body>
+</html>
