@@ -30,12 +30,12 @@ body{
   -webkit-font-smoothing:antialiased;
   overscroll-behavior:none;
 }
-.app{max-width:520px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;position:relative}
+.app{max-width:520px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden}
 button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
 .wordmark{font-family:"GFS Didot",Georgia,serif;letter-spacing:.02em}
 
 /* ---------- HOME ---------- */
-#home{padding:28px 20px 40px;flex:1}
+#home{padding:28px 20px 40px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .brand{display:flex;align-items:baseline;gap:10px;margin:6px 2px 26px}
 .brand h1{font-family:"GFS Didot",Georgia,serif;font-size:34px;margin:0;font-weight:400}
 .brand .sub{color:var(--muted);font-size:13px;font-weight:500}
@@ -63,7 +63,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .check{color:var(--correct)}
 
 /* ---------- PRACTICE ---------- */
-#practice{flex:1;display:none;flex-direction:column;padding:14px 18px 0}
+#practice{flex:1;display:none;flex-direction:column;padding:14px 18px 0;overflow:hidden;min-height:0}
+#stage{flex:1;display:flex;flex-direction:column;min-height:0}
+.pscroll{flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .top{display:flex;align-items:center;gap:14px;padding:6px 2px 18px}
 .x{width:34px;height:34px;border-radius:50%;color:var(--muted);font-size:22px;display:grid;place-items:center;flex:0 0 auto}
 .x:active{background:var(--surface)}
@@ -115,7 +117,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .shake{animation:shake .4s}
 
 .check-btn{
-  margin:6px 2px 18px;padding:17px;border-radius:16px;width:100%;
+  flex:0 0 auto;margin:6px 2px 18px;padding:17px;border-radius:16px;width:100%;
   background:var(--accent);color:#3a2b06;font-weight:700;font-size:16px;letter-spacing:.03em;
   box-shadow:0 4px 0 var(--accent-press);transition:transform var(--tap),opacity var(--tap)}
 .check-btn:active{transform:translateY(4px);box-shadow:0 0 0 var(--accent-press)}
@@ -951,11 +953,13 @@ function loadSentence(){
   S.solved = false;
   prog.style.width = ((S.idx)/S.queue.length*100)+"%";
   drawStage(s);
+  const ps=$("#pscroll"); if(ps) ps.scrollTop=0;   // always start showing the top bar
   playSentence();                     // auto-play on arrival
 }
 
 function drawStage(s){
   stage.innerHTML = `
+    <div class="pscroll" id="pscroll">
     <div class="prompt">TAP WHAT YOU HEAR · нажми, что слышишь</div>
     <div class="audiorow" id="arow">
       <button class="speaker" id="play" aria-label="Play audio">
@@ -967,6 +971,7 @@ function drawStage(s){
     <div class="assembly" id="assembly"><div class="rule" id="rule"></div></div>
     <div class="spacer"></div>
     <div class="bank" id="bank"></div>
+    </div>
     <button class="check-btn" id="check" disabled>ПРОВЕРИТЬ</button>`;
   $("#play").onclick = ()=> playSentence();
   $("#slow").onclick = ()=> playSentence(true);
