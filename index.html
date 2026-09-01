@@ -36,7 +36,18 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 
 /* ---------- HOME ---------- */
 #home{padding:28px 20px 40px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.brand{display:flex;align-items:baseline;gap:10px;margin:6px 2px 26px}
+.brand{display:flex;align-items:baseline;gap:10px;margin:6px 2px 16px}
+.randlesson{width:100%;display:flex;align-items:center;gap:14px;text-align:left;margin:0 0 26px;
+  background:var(--surface);border:1px solid rgba(227,168,60,.35);border-radius:16px;padding:14px 16px;
+  transition:transform var(--tap),background var(--tap),border-color var(--tap)}
+.randlesson:active{transform:scale(.98);background:var(--surface2)}
+.rl-badge{width:42px;height:42px;border-radius:12px;flex:0 0 auto;display:grid;place-items:center;
+  background:linear-gradient(180deg,var(--accent),#f0c268);color:#3a2b06}
+.rl-badge svg{width:22px;height:22px}
+.rl-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rl-title{font-weight:700;font-size:16px;color:var(--text)}
+.rl-sub{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rl-go{margin-left:auto;color:var(--accent);font-size:20px;font-weight:700;flex:0 0 auto}
 .brand h1{font-family:"GFS Didot",Georgia,serif;font-size:34px;margin:0;font-weight:400}
 .brand .sub{color:var(--muted);font-size:13px;font-weight:500}
 .reset{margin-left:auto;align-self:center;font-size:12px;font-weight:600;color:var(--muted);
@@ -163,6 +174,16 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
       <span class="sub">tap what you hear · греческий</span>
       <button class="reset" id="reset">Clear progress</button>
     </div>
+    <button class="randlesson" id="randLesson">
+      <span class="rl-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M21 3 13 11"/><path d="M16 21h5v-5"/><path d="m15 15 6 6"/><path d="M3 4h4l14 16"/><path d="m3 20 6-6"/></svg>
+      </span>
+      <span class="rl-text">
+        <span class="rl-title">Random lesson</span>
+        <span class="rl-sub">jump into any lesson · случайный урок</span>
+      </span>
+      <span class="rl-go">→</span>
+    </button>
     <div id="modules"></div>
   </section>
 
@@ -933,6 +954,12 @@ function renderHome(){
 /* ---------- PRACTICE STATE ---------- */
 let S = null;
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[a[i],a[j]]=[a[j],a[i]];}return a;}
+function randomLesson(){
+  const opts=[];
+  DATA.modules.forEach((m,mi)=>m.lessons.forEach((l,li)=>opts.push([mi,li])));
+  const [mi,li]=opts[(Math.random()*opts.length)|0];
+  startLesson(mi,li);   // same flow; completing it ticks that lesson on the home page
+}
 
 function startLesson(mi, li){
   const lesson = DATA.modules[mi].lessons[li];
@@ -1088,6 +1115,7 @@ function finishLesson(){
 }
 
 $("#quit").onclick = ()=>{ hideSheet(); if(audioEl) audioEl.pause(); renderHome(); };
+$("#randLesson").onclick = randomLesson;
 
 let resetArmed=false, resetTimer=null;
 function disarmReset(){ resetArmed=false; clearTimeout(resetTimer);
